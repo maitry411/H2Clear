@@ -1,36 +1,59 @@
-Private key can be found in the metamask chrome extension account details.
-and the rpc url at: https://developer.metamask.io/key/active-endpoints
-We have deployed this on ethereum using foundry.
-For foundry you first need GIT BASH
+# Deploying GreenHydrogenCertificate Smart Contract with Foundry
 
-Foundry installer download:
+We’ll use Foundry (a powerful Ethereum development toolkit) to deploy the contract on the Ethereum Sepolia testnet using MetaMask private key + Infura RPC.
+
+
+✅ Prerequisites
+- MetaMask installed with some Sepolia ETH (testnet tokens).
+- Git Bash installed (on Windows).
+- An Infura account (free) → to get your RPC endpoint.  
+  👉 [MetaMask Developer Endpoints](https://developer.metamask.io/key/active-endpoints)
+
+1. Install Foundry
+Open Git Bash and run:
+
+bash
+# Download Foundry installer
 curl -L https://foundry.paradigm.xyz | bash
-Reload your shell:
+
+# Reload shell
 source /c/Users/HP\ Laptop/.bashrc
-Install Foundry:
+
+# Install Foundry binaries
 foundryup
-Verify:
+
+
+✅ Verify installation:
+
 forge --version
 cast --version
 anvil --version
 
-Navigate to the Project Directory
-then Initialize Foundry Project:
-forge init
-This will create a basic project structure:
+2. Initialize Project
+Navigate to your project folder and create a Foundry project:
+forge init green-hydrogen-smart-contract
+cd green-hydrogen-smart-contract
+
+This generates:
+
 green-hydrogen-smart-contract/
 ├── src/
 ├── lib/
 ├── script/
 ├── test/
 └── foundry.toml
-And some more things we don't need to think of.
 
-Open src/GreenHydrogenCertificate.sol.
+3. Add Your Contract
+Paste your GreenHydrogenCertificate.sol contract inside:
+src/GreenHydrogenCertificate.sol
 
-Add your contract code into this file:
+4. Create Deployment Script
+Create a file:
+script/Deploy.s.sol
 
-Create script/Deploy.s.sol and paste the following code:
+
+Paste this code:
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
@@ -44,23 +67,27 @@ contract DeployGreenHydrogenCertificate is Script {
         vm.stopBroadcast();
     }
 }
-Then, create a .env file and add the following:
 
+5. Setup Environment Variables
+Create a .env file in your project root:
 SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID
 PRIVATE_KEY=your_metamask_private_key
 
-Deploy Your Contract
+⚠ Never share your private key. Only use testnet accounts here.
+
+6. Deploy the Contract
+Run this command in Git Bash:
 forge script script/Deploy.s.sol:DeployGreenHydrogenCertificate \
   --rpc-url $SEPOLIA_RPC_URL \
   --private-key $PRIVATE_KEY \
   --broadcast
 
-You'll get a lot in result when you follow these successfully.
-Along with: ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
 
-Verify the Contract on Etherscan:
+✅ After execution, you’ll see:
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
+and a contract address.
 
+7. Verify on Etherscan
 Go to Sepolia Etherscan
- and paste the contract address:
-
- That's how we successfully deployed our blockchain smart contract.
+Paste your contract address.
+You’ll see your deployed contract 🎉
