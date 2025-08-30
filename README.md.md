@@ -14,7 +14,7 @@ It is divided into **four** main parts:
 ## ⚡ Components
 
 ### 1. Blockchain (`/blockchain`)
-- Implements the **GreenHydrogenCertificate** smart contract in Solidity.
+- Implements the **GreenHydrogenCertificate** smart contract in Solidity. (with ERC-721)
 - Deployed on Ethereum-compatible blockchains.
 - Handles role management, issuance, transfer, and retirement of certificates.
 

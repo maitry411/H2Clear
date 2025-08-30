@@ -1,8 +1,0 @@
-{
-  "builds": [
-    {
-      "src": "landing-page/index.html",
-      "use": "@vercel/static"
-    }
-  ]
-}
