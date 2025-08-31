@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash, url_for
+from flask import Flask, render_template, request, redirect, flash, url_for, session
 import firebase_admin
 from firebase_admin import credentials, auth
 from google.oauth2 import service_account
@@ -36,15 +36,19 @@ def login():
             return render_template('login.html')
 
         try:
-            # ⚠️ BAD PRACTICE: Just pretend user is valid
-            # Instead of verifying ID token, look up Firestore doc by email
             user_docs = db.collection('users').where('email', '==', email).limit(1).stream()
             user_data = None
+            uid = None
             for doc in user_docs:
                 user_data = doc.to_dict()
+                uid = doc.id  # Get Firestore document ID as uid
 
             if user_data:
                 role = user_data.get('role', 'Unknown')
+                # Set session variables here to mark user authenticated
+                session['uid'] = uid
+                session['role'] = role
+                session['email'] = email
                 return redirect(url_for('dashboard', role=role))
             else:
                 flash('User record not found.')
@@ -56,6 +60,11 @@ def login():
     return render_template('login.html')
 
 
+
+@app.route('/logout')
+def logout():
+    session.clear()  # clear all session data (log user out)
+    return redirect(url_for('login'))  # redirect back to login page
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -84,8 +93,22 @@ def register():
 
 @app.route('/dashboard')
 def dashboard():
-    role = request.args.get('role', 'Unknown')
-    return f"<h1>Dashboard</h1><p>Welcome! Your role is: <b>{role}</b></p>"
+    if 'uid' not in session:
+        flash('Please login first.')
+        return redirect(url_for('login'))
+
+    uid = session['uid']
+
+    user_doc = db.collection('users').document(uid).get()
+    if not user_doc.exists:
+        flash('User record not found.')
+        return redirect(url_for('login'))
+
+    user_data = user_doc.to_dict()
+    role = user_data.get('role', 'Unknown')
+    name = user_data.get('name', 'User')
+
+    return render_template('dashboard.html', role=role, name=name)
 
 # Run the app only if this script is executed directly
 if __name__ == '__main__':

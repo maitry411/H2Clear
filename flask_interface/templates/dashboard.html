@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+</head>
+<body>
+  <h1>Welcome, {{ name }}!</h1>
+
+  {% if role == 'consumer' %}
+    {% include 'dashboard_consumer.html' %}
+  {% elif role == 'producer' %}
+    {% include 'dashboard_producer.html' %}
+  {% elif role == 'government' %}
+    {% include 'dashboard_gov.html' %}
+  {% elif role == 'certifier' %}
+    {% include 'dashboard_certifier.html' %}
+  {% else %}
+    <p>Your role "{{ role }}" does not have a dashboard assigned.</p>
+  {% endif %}
+
+  <a href="{{ url_for('logout') }}">Logout</a>
+</body>
+</html>
