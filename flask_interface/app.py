@@ -3,7 +3,13 @@ import firebase_admin
 from firebase_admin import credentials, auth
 from google.oauth2 import service_account
 from google.cloud import firestore
+from dotenv import load_dotenv
+import os
 
+load_dotenv()  # take environment variables from .env.
+
+# Now get values with os.environ.get()
+secret_key = os.environ.get('SECRET_KEY')
 
 cred = credentials.Certificate('firebase-auth.json')
 firebase_admin.initialize_app(cred)
@@ -22,7 +28,7 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     return render_template('index.html')
-app.secret_key = 'your_secret_key'
+app.secret_key = secret_key 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

@@ -1,1 +1,279 @@
-certi
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Certifier Dashboard - H₂ Clear</title>
+  <style>
+    body {
+      background: #101610;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      background: rgba(15, 30, 15, 0.85);
+      border-radius: 24px;
+      box-shadow: 0 12px 40px rgba(139, 195, 74, 0.1);
+      padding: 40px 50px;
+      max-width: 700px;
+      width: 100%;
+      gap: 40px;
+    }
+    h2 {
+      color: #8BC34A;
+      margin-bottom: 20px;
+      font-weight: bold;
+      font-size: 28px;
+      text-align: center;
+    }
+    .requests-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(11, 24, 11, 0.75);
+    }
+    th, td {
+      text-align: left;
+      padding: 12px 15px;
+      border-bottom: 1px solid rgba(139,195,74,0.2);
+      font-size: 16px;
+      vertical-align: middle;
+    }
+    th {
+      background-color: #8BC34A;
+      color: #101610;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .status-pending {
+      color: #f0ad4e;
+      font-weight: 600;
+    }
+    .status-approved {
+      color: #8BC34A;
+      font-weight: 600;
+    }
+    .status-rejected, .status-revoked {
+      color: #d9534f;
+      font-weight: 600;
+    }
+    button {
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: none;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      margin-right: 8px;
+      transition: background 0.3s;
+    }
+    .btn-approve {
+      background: #6A994E;
+      color: #101610;
+    }
+    .btn-approve:hover {
+      background: #577536;
+    }
+    .btn-reject {
+      background: #d9534f;
+      color: #fff;
+    }
+    .btn-reject:hover {
+      background: #b2322a;
+    }
+    .btn-revoke {
+      background: #a63c3c;
+      color: #fff;
+    }
+    .btn-revoke:hover {
+      background: #7e2c2c;
+    }
+    @media (max-width: 700px) {
+      .container {
+        padding: 25px 20px;
+      }
+      th, td {
+        font-size: 14px;
+        padding: 10px 12px;
+      }
+      button {
+        font-size: 12px;
+        padding: 5px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Certification Requests</h2>
+    <table class="requests-table" id="requestsTable">
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Producer Address</th>
+          <th>Certificate URI</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Dynamically populated by JS -->
+      </tbody>
+    </table>
+    <div id="noRequestsMessage" style="margin-top: 14px; color: #a1e387; text-align:center;">
+      No certification requests found.
+    </div>
+  </div>
+
+<script>
+  const noReqMsg = document.getElementById("noRequestsMessage");
+  noReqMsg.style.display = "none";
+
+  // Example placeholder data: to be replaced by real Firestore query results
+  let requests = [
+    // Sample requests with different statuses
+    { id: "req1", producerAddress: "0x123a...abc", certificateURI: "ipfs://QmXyz...", status: "pending" },
+    { id: "req2", producerAddress: "0x456b...def", certificateURI: "ipfs://QmAbc...", status: "approved" },
+    { id: "req3", producerAddress: "0x789c...ghi", certificateURI: "ipfs://QmDef...", status: "rejected" },
+  ];
+
+  const tbody = document.querySelector("#requestsTable tbody");
+
+  function updateRequestStatus(reqId, newStatus) {
+    // TODO: Update request status in Firestore backend.
+    // For demo, update locally and re-render.
+    const reqIndex = requests.findIndex(r => r.id === reqId);
+    if (reqIndex !== -1) {
+      requests[reqIndex].status = newStatus;
+      renderRequests();
+    }
+  }
+
+  function approveRequest(reqId) {
+    // Trigger blockchain mint + update firestore status to "approved"
+    alert(`Approving request ${reqId}: call blockchain mint & update DB`);
+    updateRequestStatus(reqId, "approved");
+  }
+
+  function rejectRequest(reqId) {
+    // Update firestore status to "rejected"
+    if (confirm("Reject this certification request?")) {
+      updateRequestStatus(reqId, "rejected");
+    }
+  }
+
+  function revokeRequest(reqId) {
+    // Revoke a previously approved request
+    if (confirm("Revoke this approved certification request?")) {
+      updateRequestStatus(reqId, "revoked");
+    }
+  }
+
+  function renderRequests() {
+    tbody.innerHTML = "";
+    if (!requests.length) {
+      noReqMsg.style.display = "block";
+      return;
+    }
+    noReqMsg.style.display = "none";
+
+    for (const req of requests) {
+      const tr = document.createElement("tr");
+
+      const tdId = document.createElement("td");
+      tdId.textContent = req.id;
+      tr.appendChild(tdId);
+
+      const tdProducer = document.createElement("td");
+      tdProducer.textContent = req.producerAddress;
+      tr.appendChild(tdProducer);
+
+      const tdUri = document.createElement("td");
+      tdUri.textContent = req.certificateURI;
+      tr.appendChild(tdUri);
+
+      const tdStatus = document.createElement("td");
+      tdStatus.textContent = req.status.charAt(0).toUpperCase() + req.status.slice(1);
+      tdStatus.className = `status-${req.status}`;
+      tr.appendChild(tdStatus);
+
+      // Actions cell
+      const tdActions = document.createElement("td");
+
+      if (req.status === "pending") {
+        const btnApprove = document.createElement("button");
+        btnApprove.textContent = "Approve";
+        btnApprove.className = "btn-approve";
+        btnApprove.onclick = () => approveRequest(req.id);
+        tdActions.appendChild(btnApprove);
+
+        const btnReject = document.createElement("button");
+        btnReject.textContent = "Reject";
+        btnReject.className = "btn-reject";
+        btnReject.onclick = () => rejectRequest(req.id);
+        tdActions.appendChild(btnReject);
+      } else if (req.status === "approved") {
+        const btnRevoke = document.createElement("button");
+        btnRevoke.textContent = "Revoke";
+        btnRevoke.className = "btn-revoke";
+        btnRevoke.onclick = () => revokeRequest(req.id);
+        tdActions.appendChild(btnRevoke);
+      } else {
+        tdActions.textContent = "-";
+      }
+
+      tr.appendChild(tdActions);
+
+      tbody.appendChild(tr);
+    }
+  }
+
+  // Initial render with example data
+  renderRequests();
+</script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
+  import { getFirestore, collection, query, where, getDocs, addDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    // Your Firebase config here
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth();
+  const db = getFirestore();
+
+  // Helper to get current user address (from Firebase user custom claims or linked wallet)
+  async function getUserWalletAddress() {
+    // For demo, returns a placeholder
+    return (await ethereum.request({ method: 'eth_requestAccounts' }))[0].toLowerCase();
+  }
+
+  // Real-time Auth Listener
+  onAuthStateChanged(auth, user => {
+    if (!user) {
+      window.location.href = '/login'; // redirect if not logged in
+    } else {
+      console.log("Logged in as", user.email);
+      // Fetch and load UI data here per role
+    }
+  });
+
+  // Common function to sign out
+  window.signOutUser = () => signOut(auth);
+</script>
+
+</body>
+
+</html>

@@ -1,1 +1,266 @@
-prod
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Producer Dashboard - H₂ Clear</title>
+  <style>
+    body {
+      background: #101610;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      background: rgba(15, 30, 15, 0.85);
+      border-radius: 24px;
+      box-shadow: 0 12px 40px rgba(139, 195, 74, 0.1);
+      padding: 40px 50px;
+      max-width: 600px;
+      width: 100%;
+      gap: 40px;
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      color: #8BC34A;
+      margin-bottom: 20px;
+      font-weight: bold;
+      font-size: 28px;
+      text-align: center;
+    }
+
+    /* Certification Request Form */
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    input[type="text"] {
+      padding: 12px 18px;
+      border-radius: 25px;
+      border: none;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 18px;
+      transition: background 0.2s;
+    }
+    input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.28);
+    }
+    button {
+      padding: 14px 0;
+      background: linear-gradient(45deg, #6A994E, #8BC34A);
+      color: #101610;
+      border-radius: 25px;
+      font-weight: bold;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: linear-gradient(45deg, #577536, #6F8B31);
+    }
+
+    /* Certificates List */
+    .certificates-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(11, 24, 11, 0.75);
+    }
+    th, td {
+      text-align: left;
+      padding: 12px 15px;
+      border-bottom: 1px solid rgba(139,195,74,0.2);
+      font-size: 16px;
+    }
+    th {
+      background-color: #8BC34A;
+      color: #101610;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .status-active {
+      color: #8BC34A;
+      font-weight: 600;
+    }
+    .status-retired {
+      color: #d9534f;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Certification Request Form -->
+    <section class="section" id="request-section">
+      <h2>Request Certification</h2>
+      <form id="certRequestForm" autocomplete="off">
+        <input
+          type="text"
+          id="certificateURI"
+          name="certificateURI"
+          placeholder="Enter certificate metadata URI"
+          required
+        />
+        <button type="submit">Submit Request</button>
+      </form>
+      <div id="requestStatus" style="margin-top: 14px; color: #a1e387; font-weight: 600; text-align:center;"></div>
+    </section>
+
+    <!-- Certificates List -->
+    <section class="section" id="certificates-section">
+      <h2>Your Certificates</h2>
+      <table class="certificates-table" id="certificatesTable">
+        <thead>
+          <tr>
+            <th>Token ID</th>
+            <th>Metadata URI</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+      <div id="noCertificatesMessage" style="margin-top: 14px; color: #a1e387; text-align:center;">
+        No certificates found.
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      // Your Firebase config here
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+
+    let userWalletAddress = "";
+
+    async function getUserWalletAddress() {
+      if (typeof ethereum !== 'undefined') {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        return accounts[0].toLowerCase();
+      } else {
+        alert("MetaMask not detected");
+        return null;
+      }
+    }
+
+    // Update UI certificates
+    const tbody = document.querySelector("#certificatesTable tbody");
+    const noCertMsg = document.getElementById("noCertificatesMessage");
+
+    function populateCertificates(certs) {
+      tbody.innerHTML = "";
+      if (!certs.length) {
+        noCertMsg.style.display = "block";
+        return;
+      }
+      noCertMsg.style.display = "none";
+
+      certs.forEach(cert => {
+        const tr = document.createElement("tr");
+
+        const tdId = document.createElement("td");
+        tdId.textContent = cert.tokenId;
+        tr.appendChild(tdId);
+
+        const tdUri = document.createElement("td");
+        tdUri.textContent = cert.uri;
+        tr.appendChild(tdUri);
+
+        const tdStatus = document.createElement("td");
+        tdStatus.textContent = cert.retired ? "Retired" : "Active";
+        tdStatus.className = cert.retired ? "status-retired" : "status-active";
+        tr.appendChild(tdStatus);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Fetch certificates owned by producer from Firestore
+    async function fetchCertificates() {
+      if (!userWalletAddress) return;
+
+      const q = query(collection(db, 'certificates'), where('ownerAddress', '==', userWalletAddress));
+      const querySnapshot = await getDocs(q);
+      const certs = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          tokenId: doc.id,
+          uri: data.certificateURI || "",
+          retired: data.status === "retired"
+        };
+      });
+      populateCertificates(certs);
+    }
+
+    // Submit certification request
+    document.getElementById("certRequestForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const uri = document.getElementById("certificateURI").value.trim();
+      if (!uri) return;
+
+      if (!userWalletAddress) {
+        alert("Please connect your wallet.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, 'certificateRequests'), {
+          producerAddress: userWalletAddress,
+          certificateURI: uri,
+          status: 'pending',
+          timestamp: new Date()
+        });
+        document.getElementById("requestStatus").textContent = "Request submitted successfully!";
+        e.target.reset();
+      } catch (error) {
+        document.getElementById("requestStatus").textContent = "Error submitting request.";
+        console.error(error);
+      }
+    });
+
+    // Listen for auth state and initialize wallet address & fetch certificates
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = '/login'; // redirect if not logged in
+      } else {
+        userWalletAddress = await getUserWalletAddress();
+        if (userWalletAddress) {
+          fetchCertificates();
+        }
+      }
+    });
+
+    // Optional: expose signOut function globally if needed
+    window.signOutUser = () => signOut(auth);
+  </script>
+</body>
+</html>
