@@ -1,126 +1,92 @@
-from flask import Flask, redirect, render_template, request, make_response, session, abort, jsonify, url_for
-import secrets
-from functools import wraps
+from flask import Flask, render_template, request, redirect, flash, url_for
 import firebase_admin
-from firebase_admin import credentials, firestore, auth
-from datetime import timedelta
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from firebase_admin import credentials, auth
+from google.oauth2 import service_account
+from google.cloud import firestore
 
 
-
-app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY')
-
-# Configure session cookie settings
-app.config['SESSION_COOKIE_SECURE'] = True  # Ensure cookies are sent over HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access to cookies
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)  # Adjust session expiration as needed
-app.config['SESSION_REFRESH_EACH_REQUEST'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Can be 'Strict', 'Lax', or 'None'
-
-
-# Firebase Admin SDK setup
-cred = credentials.Certificate("firebase-auth.json")
+cred = credentials.Certificate('firebase-auth.json')
 firebase_admin.initialize_app(cred)
-db = firestore.client()
+SERVICE_ACCOUNT_FILE = 'firebase-auth.json'
 
+# Load credentials from the service account file using google-auth
+creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
 
+# Initialize Firestore client with these credentials and project id
+db = firestore.Client(credentials=creds, project=creds.project_id)
 
-########################################
-""" Authentication and Authorization """
+# Create an instance of the Flask class
+app = Flask(__name__)
 
-# Decorator for routes that require authentication
-def auth_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        # Check if user is authenticated
-        if 'user' not in session:
-            return redirect(url_for('login'))
-        
-        else:
-            return f(*args, **kwargs)
-        
-    return decorated_function
-
-
-@app.route('/auth', methods=['POST'])
-def authorize():
-    token = request.headers.get('Authorization')
-    if not token or not token.startswith('Bearer '):
-        return "Unauthorized", 401
-
-    token = token[7:]  # Strip off 'Bearer ' to get the actual token
-
-    try:
-        decoded_token = auth.verify_id_token(token, check_revoked=True, clock_skew_seconds=60) # Validate token here
-        session['user'] = decoded_token # Add user to session
-        return redirect(url_for('dashboard'))
-    
-    except:
-        return "Unauthorized", 401
-
-
-#####################
-""" Public Routes """
-
+# Define a route for the root URL that returns a simple message
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('index.html')
+app.secret_key = 'your_secret_key'
 
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    if 'user' in session:
-        return redirect(url_for('dashboard'))
-    else:
-        return render_template('login.html')
+    if request.method == 'POST':
+        # Grab email & password from form instead of idToken
+        email = request.form.get('email')
+        password = request.form.get('password')
 
-@app.route('/signup')
-def signup():
-    if 'user' in session:
-        return redirect(url_for('dashboard'))
-    else:
-        return render_template('signup.html')
+        if not email or not password:
+            flash('Email or password missing.')
+            return render_template('login.html')
 
+        try:
+            # ⚠️ BAD PRACTICE: Just pretend user is valid
+            # Instead of verifying ID token, look up Firestore doc by email
+            user_docs = db.collection('users').where('email', '==', email).limit(1).stream()
+            user_data = None
+            for doc in user_docs:
+                user_data = doc.to_dict()
 
-@app.route('/reset-password')
-def reset_password():
-    if 'user' in session:
-        return redirect(url_for('dashboard'))
-    else:
-        return render_template('forgot_password.html')
+            if user_data:
+                role = user_data.get('role', 'Unknown')
+                return redirect(url_for('dashboard', role=role))
+            else:
+                flash('User record not found.')
+                return render_template('login.html')
 
-@app.route('/terms')
-def terms():
-    return render_template('terms.html')
-
-@app.route('/privacy')
-def privacy():
-    return render_template('privacy.html')
-
-@app.route('/logout')
-def logout():
-    session.pop('user', None)  # Remove the user from session
-    response = make_response(redirect(url_for('login')))
-    response.set_cookie('session', '', expires=0)  # Optionally clear the session cookie
-    return response
+        except Exception as e:
+            flash(f'Login failed: {str(e)}')
+            return render_template('login.html')
+    return render_template('login.html')
 
 
-##############################################
-""" Private Routes (Require authorization) """
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        name = request.form['name']
+        role = request.form['role']
+        try:
+            user = auth.create_user(email=email, password=password, display_name=name)
+
+            # Save extra info in Firestore under user uid
+            db.collection('users').document(user.uid).set({
+                'name': name,
+                'email': email,
+                'role': role
+            })
+
+            flash('User created successfully! Please login.')
+            return redirect(url_for('login'))
+        except Exception as e:
+            flash(f'Error creating user: {str(e)}')
+            return render_template('register.html')
+    return render_template('register.html')
+
 
 @app.route('/dashboard')
-@auth_required
 def dashboard():
+    role = request.args.get('role', 'Unknown')
+    return f"<h1>Dashboard</h1><p>Welcome! Your role is: <b>{role}</b></p>"
 
-    return render_template('dashboard.html')
-
-
-
-
-
-
+# Run the app only if this script is executed directly
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True)  # debug=True enables debug mode for development

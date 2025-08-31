@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - H₂ Clear</title>
+  <style>
+    body {
+      background: #101610;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+    .container {
+      background: rgba(15, 30, 15, 0.92);
+      border-radius: 24px;
+      box-shadow: 0 12px 40px rgba(139, 195, 74, 0.12);
+      padding: 48px 42px;
+      max-width: 430px;
+      width: 100%;
+      margin: 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .logo {
+      font-size: 65px;
+      font-weight: bold;
+      color: #8BC34A;
+      margin-bottom: 12px;
+    }
+    .tagline {
+      font-size: 18px;
+      color: #A1E387;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .register-title {
+      font-size: 32px;
+      font-weight: bold;
+      color: #8BC34A;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .register-desc {
+      color: #A1E387;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: 15px;
+    }
+    input, select {
+      padding: 12px 17px;
+      border-radius: 25px;
+      border: none;
+      background: rgba(255,255,255,0.13);
+      color: #fff;
+      font-size: 17px;
+      margin-bottom: 11px;
+      transition: background 0.2s;
+    }
+    select:focus, input:focus {
+      outline: none;
+      background: rgba(255,255,255,0.22);
+    }
+    .btn-primary {
+      padding: 13px 0;
+      background: linear-gradient(45deg, #6A994E, #8BC34A);
+      color: #101610;
+      border-radius: 25px;
+      font-weight: bold;
+      border: none;
+      width: 100%;
+      font-size: 18px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .actions {
+      margin-top: 13px;
+      text-align: center;
+    }
+    .actions a {
+      color: #8BC34A;
+      text-decoration: underline;
+      font-size: 16px;
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 25px 7vw;
+        max-width: 98vw;
+        margin: 0;
+      }
+      .logo {
+        font-size: 48px;
+      }
+      .register-title {
+        font-size: 23px;
+      }
+      .register-desc, .tagline {
+        font-size: 14px;
+      }
+      input, select {
+        font-size: 15px;
+        padding: 10px 10px;
+      }
+      .btn-primary {
+        font-size: 15px;
+        padding: 10px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">H<sub>2</sub><span style="font-size:28px;color:#8BC34A;">CLEAR</span></div>
+    <div class="tagline">"Trusted Credits for a Cleaner Future."</div>
+    <div class="register-title">Create Account</div>
+    <div class="register-desc">Start your journey with H₂Clear</div>
+    <form method="POST" autocomplete="off">
+      <input type="text" name="name" placeholder="Name" required>
+      <input type="email" name="email" placeholder="Email" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <select name="role" required>
+        <option value="" disabled selected>Select Role</option>
+        <option value="producer">Producer</option>
+        <option value="consumer">Consumer</option>
+        <option value="certifier">Certifier</option>
+        <option value="government">Government</option>
+      </select>
+      <button type="submit" class="btn-primary">Register</button>
+    </form>
+    <div class="actions">
+      <a href="{{ url_for('login') }}">Already have an account? Login</a>
+    </div>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul style="color:#ff6666;margin:10px 0 0 0;">
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+  </div>
+</body>
+</html>
